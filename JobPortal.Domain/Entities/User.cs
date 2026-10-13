@@ -20,7 +20,7 @@ public class User
     public int FailedLoginAttempts { get; set; }
     public DateTime? LockoutUntil { get; set; }
 
-    // UtcNow, не Now. Сервер в Azure в іншому поясі, ніж ти.
+    //не Now Сервер в Azure в іншому поясі
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public List<RefreshToken> RefreshTokens { get; set; } = new();
