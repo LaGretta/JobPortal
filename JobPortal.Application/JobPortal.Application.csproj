@@ -6,7 +6,10 @@
 
   <ItemGroup>
     <Folder Include="Interfaces\Service\" />
-    <Folder Include="Validator\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="12.2.0" />
   </ItemGroup>
 
   <PropertyGroup>
