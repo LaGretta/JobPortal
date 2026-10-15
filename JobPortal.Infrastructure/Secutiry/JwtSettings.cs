@@ -1,6 +1,8 @@
-﻿namespace JobPortal.Infrastructure.Secutiry;
+﻿using JobPortal.Application.Interfaces.Security;
 
-public class JwtSettings
+namespace JobPortal.Infrastructure.Secutiry;
+
+public class JwtSettings : ITokenLifetimeProvider
 {
     public string Key { get; set; } = string.Empty;
     public string Issuer { get; set; } = string.Empty;
