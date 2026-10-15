@@ -1,6 +1,6 @@
 ﻿using JobPortal.Domain.Enums;
 
-namespace JobPortal.Application.DTO;
+namespace JobPortal.Application.DTO.Auth;
 
 public class RegisterDto
 {

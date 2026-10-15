@@ -1,4 +1,5 @@
 ﻿using JobPortal.Application.DTO;
+using JobPortal.Application.DTO.Auth;
 using JobPortal.Application.Exceptions;
 using JobPortal.Application.Interfaces;
 using JobPortal.Application.Interfaces.Repository;

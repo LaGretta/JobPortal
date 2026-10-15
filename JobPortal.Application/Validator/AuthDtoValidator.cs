@@ -1,12 +1,13 @@
 ﻿using FluentValidation;
 using JobPortal.Application.DTO;
+using JobPortal.Application.DTO.Auth;
 using JobPortal.Domain.Enums;
 
 namespace JobPortal.Application.Validator;
 
-public class RegisterDtoValidator : AbstractValidator<RegisterDto>
+public class AuthDtoValidator : AbstractValidator<RegisterDto>
 {
-    public RegisterDtoValidator()
+    public AuthDtoValidator()
     {
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256);
         RuleFor(x => x.Password).NotEmpty().MinimumLength(8).MaximumLength(100);

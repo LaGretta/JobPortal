@@ -1,4 +1,5 @@
 ﻿using JobPortal.Application.DTO;
+using JobPortal.Application.DTO.Auth;
 
 namespace JobPortal.Application.Interfaces.Service;
 

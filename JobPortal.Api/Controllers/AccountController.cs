@@ -1,4 +1,4 @@
-﻿using JobPortal.Application.DTO;
+﻿using JobPortal.Application.DTO.Auth;
 using JobPortal.Application.Interfaces.Service;
 using Microsoft.AspNetCore.Mvc;
 
