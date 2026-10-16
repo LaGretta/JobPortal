@@ -6,6 +6,9 @@ using JobPortal.Application.Interfaces.Repository;
 using JobPortal.Application.Interfaces.Security;
 using JobPortal.Application.Interfaces.Service;
 using JobPortal.Domain.Entities;
+using System.Security.Cryptography;
+using System.Text;
+using JobPortal.Application.Interfaces.Infrastructure;
 
 namespace JobPortal.Application.Service;
 
@@ -13,7 +16,11 @@ public class AuthService : IAuthService
 {
     private const int MaxFailedAttempts = 5;
     private const int LockoutMinutes = 15;
+    
+    private const int ResetTokenMinutes = 30;
 
+    private readonly IPasswordResetTokenRepository _resetTokens;
+    private readonly IEmailSender _email;
     private readonly IUserRepository _users;
     private readonly IRefreshTokenRepository _refreshTokens;
     private readonly IUnitOfWork _uow;
@@ -28,13 +35,17 @@ public class AuthService : IAuthService
         IUnitOfWork uow,
         IPasswordHasher hasher,
         IJwtTokenGenerator jwt,
-        ITokenLifetimeProvider lifetimes)
+        ITokenLifetimeProvider lifetimes,
+        IPasswordResetTokenRepository resetTokens,
+        IEmailSender email)
     {
         _users = users;
         _refreshTokens = refreshTokens;
         _uow = uow;
         _hasher = hasher;
         _jwt = jwt;
+        _resetTokens = resetTokens;
+        _email = email;
         _accessMinutes = lifetimes.AccessTokenMinutes;
         _refreshDays = lifetimes.RefreshTokenDays;
     }
@@ -154,6 +165,70 @@ public class AuthService : IAuthService
 
         await _uow.SaveChangesAsync(ct);
     }
+    
+    
+    
+    public async Task ForgotPasswordAsync(ForgotPasswordDto dto, CancellationToken ct)
+    {
+    var user = await _users.GetByEmailAsync(Normalize(dto.Email), ct);
+
+    // Юзера нема — виходимо.
+    if (user is null) return;
+
+    // Попросив тричі — старі листи перестають працювати.
+    await _resetTokens.InvalidateAllForUserAsync(user.Id, ct);
+
+    string rawToken = GenerateUrlSafeToken();
+
+    await _resetTokens.AddAsync(new PasswordResetToken
+    {
+        TokenHash = HashToken(rawToken),
+        UserId = user.Id,
+        ExpiresAt = DateTime.UtcNow.AddMinutes(ResetTokenMinutes)
+    }, ct);
+
+    await _uow.SaveChangesAsync(ct);
+
+    // У лист — відкритий токен. У базі лежить тільки хеш.
+    await _email.SendPasswordResetAsync(user.Email, user.FirstName, rawToken, ct);
+    }
+
+    public async Task ResetPasswordAsync(ResetPasswordDto dto, CancellationToken ct)
+    {
+    var stored = await _resetTokens.GetByHashAsync(HashToken(dto.Token), ct);
+
+    // IsActive перевіряє і UsedAt, і термін — одним викликом.
+    if (stored is null || !stored.IsActive)
+        throw new UnauthorizedException("Посилання недійсне або протерміноване");
+
+    var user = stored.User;
+
+    user.PasswordHash = _hasher.Hash(dto.NewPassword);
+    user.FailedLoginAttempts = 0;
+    user.LockoutUntil = null;
+    _users.Update(user);
+
+    stored.UsedAt = DateTime.UtcNow;
+    _resetTokens.Update(stored);
+
+    await _uow.SaveChangesAsync(ct);
+
+    // Пароль змінився — усі сесії на всіх пристроях мають померти.
+    // Інакше той, хто вкрав акаунт, лишається всередині.
+    await _refreshTokens.RevokeAllForUserAsync(user.Id, ct);
+    }
+
+// 32 випадкові байти в base64, адаптованому для URL:
+// + і / у посиланні ламаються, = в кінці зайвий.
+    private static string GenerateUrlSafeToken()
+    => Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
+        .Replace("+", "-")
+        .Replace("/", "_")
+        .TrimEnd('=');
+
+    private static string HashToken(string token)
+    => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+    
 
     private static string Normalize(string email)
         => email.Trim().ToUpperInvariant();

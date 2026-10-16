@@ -26,4 +26,17 @@ public class SmtpEmailSender : IEmailSender
         await client.SendAsync(message, ct);
         await client.DisconnectAsync(true, ct);
     }
+    public Task SendPasswordResetAsync(string to, string firstName, string token, CancellationToken ct)
+    {
+        string link = $"{_settings.ResetUrlBase}?token={Uri.EscapeDataString(token)}";
+
+        string body = $"""
+                       <p>Вітаємо, {firstName}!</p>
+                       <p>Ви просили скинути пароль. Посилання діє 30 хвилин:</p>
+                       <p><a href="{link}">Встановити новий пароль</a></p>
+                       <p>Якщо це були не ви — просто проігноруйте лист.</p>
+                       """;
+
+        return SendAsync(to, "Скидання пароля — JobPortal", body, ct);
+    }
 }

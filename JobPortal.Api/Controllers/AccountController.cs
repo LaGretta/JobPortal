@@ -30,4 +30,19 @@ public class AccountController : ControllerBase
         await _auth.LogoutAsync(dto.RefreshToken, ct);
         return NoContent();
     }
+    
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordDto dto, CancellationToken ct)
+    {
+        await _auth.ForgotPasswordAsync(dto, ct);
+        // Завжди 200, навіть якщо такого email не існує.
+        return Ok(new { message = "Якщо акаунт існує, лист надіслано" });
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(ResetPasswordDto dto, CancellationToken ct)
+    {
+        await _auth.ResetPasswordAsync(dto, ct);
+        return Ok(new { message = "Пароль змінено" });
+    }
 }
