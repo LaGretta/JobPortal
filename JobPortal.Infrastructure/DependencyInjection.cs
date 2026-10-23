@@ -26,7 +26,7 @@ public static class DependencyInjection
         services.AddSingleton<ITokenLifetimeProvider>(sp => sp.GetRequiredService<JwtSettings>());
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
-        
+        services.AddScoped<ICompanyRepository, CompanyRepository>();
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();

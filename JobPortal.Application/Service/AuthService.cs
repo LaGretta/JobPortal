@@ -9,6 +9,7 @@ using JobPortal.Domain.Entities;
 using System.Security.Cryptography;
 using System.Text;
 using JobPortal.Application.Interfaces.Infrastructure;
+using JobPortal.Domain.Enums;
 
 namespace JobPortal.Application.Service;
 
@@ -28,6 +29,7 @@ public class AuthService : IAuthService
     private readonly IJwtTokenGenerator _jwt;
     private readonly int _accessMinutes;
     private readonly int _refreshDays;
+    private readonly ICompanyRepository _companies;
 
     public AuthService(
         IUserRepository users,
@@ -37,7 +39,8 @@ public class AuthService : IAuthService
         IJwtTokenGenerator jwt,
         ITokenLifetimeProvider lifetimes,
         IPasswordResetTokenRepository resetTokens,
-        IEmailSender email)
+        IEmailSender email,
+        ICompanyRepository companies)
     {
         _users = users;
         _refreshTokens = refreshTokens;
@@ -46,28 +49,17 @@ public class AuthService : IAuthService
         _jwt = jwt;
         _resetTokens = resetTokens;
         _email = email;
+        _companies = companies;
         _accessMinutes = lifetimes.AccessTokenMinutes;
         _refreshDays = lifetimes.RefreshTokenDays;
     }
 
-    public async Task<AuthResponseDto> RegisterAsync(RegisterDto dto, CancellationToken ct)
+    public async Task<AuthResponseDto> RegisterCandidateAsync(
+        RegisterCandidateDto dto, CancellationToken ct)
     {
-        string normalized = Normalize(dto.Email);
-
-        if (await _users.ExistsByEmailAsync(normalized, ct))
-            throw new ConflictException("Користувач з таким email уже існує");
-
-        var user = new User
-        {
-            Email = dto.Email.Trim(),
-            NormalizedEmail = normalized,
-            PasswordHash = _hasher.Hash(dto.Password),
-            FirstName = dto.FirstName.Trim(),
-            LastName = dto.LastName.Trim(),
-            Role = dto.Role
-        };
-
-        await _users.AddAsync(user, ct);
+        var user = await CreateUserAsync(
+            dto.Email, dto.Password, dto.FirstName, dto.LastName,
+            UserRole.JobSeeker, ct);
 
         var refresh = CreateRefreshToken(user.Id);
         await _refreshTokens.AddAsync(refresh, ct);
@@ -77,12 +69,56 @@ public class AuthService : IAuthService
         return BuildResponse(user, refresh.Token);
     }
 
+    public async Task<AuthResponseDto> RegisterEmployerAsync(
+        RegisterEmployerDto dto, CancellationToken ct)
+    {
+        var user = await CreateUserAsync(
+            dto.Email, dto.Password, dto.FirstName, dto.LastName,
+            UserRole.Employer, ct);
+
+        await _companies.AddAsync(new Company
+        {
+            Name = dto.CompanyName.Trim(),
+            Website = dto.CompanyWebsite?.Trim(),
+            Description = dto.CompanyDescription?.Trim(),
+            OwnerId = user.Id
+        }, ct);
+
+        var refresh = CreateRefreshToken(user.Id);
+        await _refreshTokens.AddAsync(refresh, ct);
+        await _uow.SaveChangesAsync(ct);
+
+        return BuildResponse(user, refresh.Token);
+    }
+
+    // Спільна частина обох реєстрацій.
+    private async Task<User> CreateUserAsync(
+        string email, string password, string firstName, string lastName,
+        UserRole role, CancellationToken ct)
+    {
+        string normalized = Normalize(email);
+
+        if (await _users.ExistsByEmailAsync(normalized, ct))
+            throw new ConflictException("Користувач з таким email уже існує");
+
+        var user = new User
+        {
+            Email = email.Trim(),
+            NormalizedEmail = normalized,
+            PasswordHash = _hasher.Hash(password),
+            FirstName = firstName.Trim(),
+            LastName = lastName.Trim(),
+            Role = role
+        };
+
+        await _users.AddAsync(user, ct);
+        return user;
+    }
+
     public async Task<AuthResponseDto> LoginAsync(LoginDto dto, CancellationToken ct)
     {
         var user = await _users.GetByEmailAsync(Normalize(dto.Email), ct);
-
-        // Однакове повідомлення для «нема такого email» і «невірний пароль».
-        // Інакше форма логіну стає способом перевірити, хто зареєстрований.
+        
         if (user is null)
             throw new UnauthorizedException("Невірний email або пароль");
 

@@ -20,8 +20,8 @@ public class User
     public int FailedLoginAttempts { get; set; }
     public DateTime? LockoutUntil { get; set; }
 
-    //не Now Сервер в Azure в іншому поясі
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    public Company? Company { get; set; }
     public List<RefreshToken> RefreshTokens { get; set; } = new();
 }

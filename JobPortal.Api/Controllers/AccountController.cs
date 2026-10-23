@@ -12,9 +12,16 @@ public class AccountController : ControllerBase
 
     public AccountController(IAuthService auth) => _auth = auth;
 
-    [HttpPost("register")]
-    public async Task<ActionResult<AuthResponseDto>> Register(RegisterDto dto, CancellationToken ct)
-        => Ok(await _auth.RegisterAsync(dto, ct));
+    [HttpPost("register/candidate")]
+    public async Task<ActionResult<AuthResponseDto>> RegisterCandidate(
+        RegisterCandidateDto dto, CancellationToken ct)
+        => Ok(await _auth.RegisterCandidateAsync(dto, ct));
+
+    [HttpPost("register/employer")]
+    public async Task<ActionResult<AuthResponseDto>> RegisterEmployer(
+        RegisterEmployerDto dto, CancellationToken ct)
+        => Ok(await _auth.RegisterEmployerAsync(dto, ct));
+    
 
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponseDto>> Login(LoginDto dto, CancellationToken ct)
