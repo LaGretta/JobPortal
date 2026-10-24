@@ -9,8 +9,8 @@ public class RegisterCandidateDtoValidator : AbstractValidator<RegisterCandidate
     {
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256);
         RuleFor(x => x.Password).NotEmpty().MinimumLength(8).MaximumLength(100);
-        RuleFor(x => x.FirstName).NotEmpty().MaximumLength(50);
-        RuleFor(x => x.LastName).NotEmpty().MaximumLength(50);
+        RuleFor(x => x.FirstName).NotEmpty().MinimumLength(2).MaximumLength(50);
+        RuleFor(x => x.LastName).NotEmpty().MinimumLength(2).MaximumLength(50);
     }
 }
 
@@ -20,8 +20,8 @@ public class RegisterEmployerDtoValidator : AbstractValidator<RegisterEmployerDt
     {
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256);
         RuleFor(x => x.Password).NotEmpty().MinimumLength(8).MaximumLength(100);
-        RuleFor(x => x.FirstName).NotEmpty().MaximumLength(50);
-        RuleFor(x => x.LastName).NotEmpty().MaximumLength(50);
+        RuleFor(x => x.FirstName).NotEmpty().MinimumLength(2).MaximumLength(50);
+        RuleFor(x => x.LastName).NotEmpty().MinimumLength(2).MaximumLength(50);
 
         RuleFor(x => x.CompanyName).NotEmpty().MaximumLength(100);
         RuleFor(x => x.CompanyDescription).MaximumLength(2000);

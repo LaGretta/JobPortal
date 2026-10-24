@@ -12,7 +12,9 @@ public class UserRepository : IUserRepository
     public UserRepository(AppDbContext db) => _db = db;
 
     public Task<User?> GetByIdAsync(Guid id, CancellationToken ct)
-        => _db.Users.FirstOrDefaultAsync(x => x.Id == id, ct);
+        => _db.Users
+            .Include(x => x.Company)
+            .FirstOrDefaultAsync(x => x.Id == id, ct);
 
     public Task<User?> GetByEmailAsync(string normalizedEmail, CancellationToken ct)
         => _db.Users.FirstOrDefaultAsync(x => x.NormalizedEmail == normalizedEmail, ct);
