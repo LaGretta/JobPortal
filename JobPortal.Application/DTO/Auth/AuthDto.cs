@@ -1,4 +1,5 @@
-﻿using JobPortal.Domain.Enums;
+﻿using JobPortal.Application.DTO.Users;
+using JobPortal.Domain.Enums;
 
 namespace JobPortal.Application.DTO.Auth;
 

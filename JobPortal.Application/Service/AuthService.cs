@@ -8,6 +8,7 @@ using JobPortal.Application.Interfaces.Service;
 using JobPortal.Domain.Entities;
 using System.Security.Cryptography;
 using System.Text;
+using JobPortal.Application.DTO.Users;
 using JobPortal.Application.Interfaces.Infrastructure;
 using JobPortal.Domain.Enums;
 
