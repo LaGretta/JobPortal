@@ -31,6 +31,7 @@ public class UserService : IUserService
             Id = user.Id,
             CompanyId = user.Company?.Id,
             Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
             FirstName = user.FirstName,
             LastName = user.LastName,
             Role = user.Role,
@@ -47,8 +48,14 @@ public class UserService : IUserService
         if (user is null)
             throw new NotFoundException("Користувача не знайдено");
 
+        
+        user.PhoneNumber = string.IsNullOrWhiteSpace(dto.PhoneNumber)
+            ? null
+            : dto.PhoneNumber.Trim();
+        
         user.FirstName = dto.FirstName.Trim();
         user.LastName = dto.LastName.Trim();
+        
         _users.Update(user);
         await _unitOfWork.SaveChangesAsync(ct);
         

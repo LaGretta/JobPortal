@@ -1,8 +1,11 @@
 using System.Text;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using JobPortal.Api.Hubs;
 using JobPortal.Api.Middleware;
+using JobPortal.Api.Services;
 using JobPortal.Application;
+using JobPortal.Application.Interfaces.Infrastructure;
 using JobPortal.Application.Validator;
 using JobPortal.Infrastructure;
 using JobPortal.Infrastructure.Secutiry;
@@ -23,6 +26,11 @@ builder.Services.AddValidatorsFromAssemblyContaining<RegisterCandidateDtoValidat
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
+
+builder.Services.AddSignalR();
+builder.Services.AddScoped<IApplicationNotifier, SignalRApplicationNotifier>();
+
+
 var jwt = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -38,6 +46,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = jwt.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Key)),
             ClockSkew = TimeSpan.Zero
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var token = context.Request.Query["access_token"];
+
+                if (!string.IsNullOrEmpty(token) &&
+                    context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = token;
+                }
+
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -69,7 +93,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy => policy
         .WithOrigins("http://localhost:5173", "http://localhost:3000")
         .AllowAnyHeader()
-        .AllowAnyMethod());
+        .AllowAnyMethod()
+        .AllowCredentials());
 });
 
 var app = builder.Build();
@@ -87,6 +112,8 @@ app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
+
+app.MapHub<ApplicationsHub>("/hubs/applications");
 app.MapControllers();
 
 app.Run();

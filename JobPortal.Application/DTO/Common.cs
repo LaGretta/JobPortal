@@ -29,7 +29,7 @@ public class PageRequest
 
     public int Skip => (Page - 1) * PageSize;
 }
-public class PagedResult<T>
+public class PagedResponse<T>
 {
     public List<T> Items { get; set; } = new();
     public int Page { get; set; }

@@ -7,6 +7,7 @@ public class User
     public Guid Id { get; set; } = Guid.NewGuid();
     
     public string Email { get; set; } = string.Empty;
+    public string? PhoneNumber { get; set; }
     public string NormalizedEmail { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
 
@@ -24,4 +25,5 @@ public class User
 
     public Company? Company { get; set; }
     public List<RefreshToken> RefreshTokens { get; set; } = new();
+    public List<JobApplication> Applications { get; set; } = new();
 }

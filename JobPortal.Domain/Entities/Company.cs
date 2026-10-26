@@ -12,6 +12,8 @@ public class Company
     // Власник — той роботодавець, що зареєстрував компанію.
     public Guid OwnerId { get; set; }
     public User Owner { get; set; } = null!;
+    
+    public List<Vacancy> Vacancies { get; set; } = new();
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

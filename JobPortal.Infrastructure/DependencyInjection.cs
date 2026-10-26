@@ -26,17 +26,20 @@ public static class DependencyInjection
         services.AddSingleton<ITokenLifetimeProvider>(sp => sp.GetRequiredService<JwtSettings>());
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
-        services.AddScoped<ICompanyRepository, CompanyRepository>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+
 
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
+        services.AddScoped<ICompanyRepository, CompanyRepository>();
+        services.AddScoped<IVacancyRepository, VacancyRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IJobApplicationRepository, JobApplicationRepository>();
+        
         
         services.Configure<EmailSettings>(configuration.GetSection("Email"));
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<EmailSettings>>().Value);
         services.AddScoped<IEmailSender, SmtpEmailSender>();
-        services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
-
         return services;
     }
 }
