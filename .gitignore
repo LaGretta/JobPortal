@@ -482,3 +482,6 @@ $RECYCLE.BIN/
 *.swp
 
 appsettings.Development.json
+
+publish/
+publish.zip
