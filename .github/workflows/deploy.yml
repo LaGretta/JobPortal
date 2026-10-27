@@ -16,18 +16,15 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Restore
-        run: dotnet restore
-
-      - name: Build
-        run: dotnet build -c Release --no-restore
-
       - name: Publish
-        run: dotnet publish JobPortal.Api -c Release -o ./publish --no-build
+        run: dotnet publish JobPortal.Api -c Release -o ./publish
 
-      - name: Deploy to Azure
-        uses: azure/webapps-deploy@v3
+      - name: Zip
+        run: cd publish && zip -r ../publish.zip . && cd ..
+
+      - uses: azure/login@v2
         with:
-          app-name: jobportal-pl-api
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: ./publish
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy
+        run: az webapp deploy -g jobportal-rg -n jobportal-pl-api --src-path publish.zip --type zip
