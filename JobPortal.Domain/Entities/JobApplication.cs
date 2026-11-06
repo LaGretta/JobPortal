@@ -15,6 +15,12 @@ public class JobApplication
     public string? CoverLetter { get; set; }
 
     public ApplicationStatus Status { get; set; } = ApplicationStatus.Pending;
+    
+    
+    // Копія CV на момент відгуку кандидат потім міняє резюм роботодавець бачить те що йому надіслали а не нове
+    public string? CvSnapshotBlobPath { get; set; }
+    public string? CvSnapshotFileName { get; set; }
+    public string? CvSnapshotContentType { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

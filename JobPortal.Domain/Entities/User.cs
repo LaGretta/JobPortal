@@ -24,6 +24,9 @@ public class User
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public Company? Company { get; set; }
+    
+    public CandidateProfile? CandidateProfile { get; set; }      
+    public List<FavoriteVacancy> Favorites { get; set; } = [];   
     public List<RefreshToken> RefreshTokens { get; set; } = new();
     public List<JobApplication> Applications { get; set; } = new();
 }

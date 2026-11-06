@@ -22,6 +22,17 @@ public class CreateVacancyDtoValidator : AbstractValidator<CreateVacancyDto>
             .GreaterThanOrEqualTo(x => x.SalaryMin!.Value)
             .When(x => x.SalaryMin.HasValue && x.SalaryMax.HasValue)
             .WithMessage("Максимум не може бути меншим за мінімум");
+        
+        RuleFor(x => x.Category).IsInEnum();
+        RuleFor(x => x.ExperienceLevel).IsInEnum();
+
+        RuleFor(x => x.Skills).Must(x => x is null || x.Count <= 20)
+            .WithMessage("Не більше 20 навичок");
+
+        // RuleForEach — правило на кожен елемент списку окремо.
+        RuleForEach(x => x.Skills).NotEmpty().MaximumLength(50);
+        RuleFor(x => x.Skills).Must(x => x is null || x.Count <= 20)
+            .WithMessage("Не більше 20 навичок");
     }
 }
 

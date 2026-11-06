@@ -26,5 +26,10 @@ public class Vacancy
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? PublishedAt { get; set; }
     
+    public VacancyCategory Category { get; set; }         // int у базі
+    public ExperienceLevel ExperienceLevel { get; set; }  // int у базі
+
+    public List<VacancySkill> Skills { get; set; } = [];  // колекція навичок
+    public List<FavoriteVacancy> Favorites { get; set; } = [];  // хто додав цю вакансію в обране
     public List<JobApplication> Applications { get; set; } = new();
 }

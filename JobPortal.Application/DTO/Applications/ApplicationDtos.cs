@@ -12,6 +12,9 @@ public class ApplicationDto
     public Guid VacancyId { get; set; }
     public string VacancyTitle { get; set; } = string.Empty;
     public string CompanyName { get; set; } = string.Empty;
+    // Чи є резюме в цьому відгуку. Фронт по цьому показує кнопку "Завантажити CV".
+    public bool HasCv { get; set; }
+    public string? CvFileName { get; set; }
 
     // Кандидат — роботодавцю видно, хто відгукнувся.
     public Guid CandidateId { get; set; }

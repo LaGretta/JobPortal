@@ -4,6 +4,7 @@ using JobPortal.Application.Exceptions;
 using JobPortal.Application.Interfaces;
 using JobPortal.Application.Interfaces.Repository;
 using JobPortal.Application.Interfaces.Service;
+using JobPortal.Application.Mapping;
 using JobPortal.Domain.Entities;
 using JobPortal.Domain.Enums;
 
@@ -14,6 +15,7 @@ public class VacancyService : IVacancyService
     private readonly IVacancyRepository _vacancies;
     private readonly ICompanyRepository _companies;
     private readonly IUnitOfWork _uow;
+    
 
     public VacancyService(
         IVacancyRepository vacancies,
@@ -81,6 +83,9 @@ public class VacancyService : IVacancyService
             Currency = dto.Currency,
             EmploymentType = dto.EmploymentType,
             WorkMode = dto.WorkMode,
+            Category = dto.Category,
+            ExperienceLevel = dto.ExperienceLevel,
+            Skills = BuildSkills(dto.Skills),
             CompanyId = company.Id,
             Status = VacancyStatus.Draft
         };
@@ -106,6 +111,13 @@ public class VacancyService : IVacancyService
         vacancy.Currency = dto.Currency;
         vacancy.EmploymentType = dto.EmploymentType;
         vacancy.WorkMode = dto.WorkMode;
+        vacancy.Category = dto.Category;
+        vacancy.ExperienceLevel = dto.ExperienceLevel;
+
+        // Навички замінюємо цілком, а не доповнюємо: клієнт прислав
+        // повний список, значить чого в ньому нема — те видалено.
+        vacancy.Skills.Clear();
+        vacancy.Skills.AddRange(BuildSkills(dto.Skills));
 
         _vacancies.Update(vacancy);
         await _uow.SaveChangesAsync(ct);
@@ -171,23 +183,13 @@ public class VacancyService : IVacancyService
 
         return vacancy;
     }
-
-    private static VacancyDto Map(Vacancy v) => new()
-    {
-        Id = v.Id,
-        Title = v.Title,
-        Description = v.Description,
-        City = v.City,
-        SalaryMin = v.SalaryMin,
-        SalaryMax = v.SalaryMax,
-        Currency = v.Currency,
-        EmploymentType = v.EmploymentType,
-        WorkMode = v.WorkMode,
-        Status = v.Status,
-        CompanyId = v.CompanyId,
-        CompanyName = v.Company.Name,
-        CompanyLogoUrl = v.Company.LogoUrl,
-        CreatedAt = v.CreatedAt,
-        PublishedAt = v.PublishedAt
-    };
-}
+    private static VacancyDto Map(Vacancy v) => VacancyMapper.ToDto(v);
+        private static List<VacancySkill> BuildSkills(List<string>? names)
+        => (names ?? [])
+            .Select(x => x.Trim())
+            .Where(x => x.Length > 0)                     // пусті рядки відкидаємо
+            .DistinctBy(x => x.ToLowerInvariant())        // "C#" і "c#" — одна навичка
+            .Take(20)                                     // стеля, щоб не прислали тисячу
+            .Select(x => new VacancySkill { Name = x })
+            .ToList();
+} 

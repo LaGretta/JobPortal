@@ -22,6 +22,55 @@ namespace JobPortal.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("JobPortal.Domain.Entities.CandidateProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("About")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CvBlobPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("CvContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CvFileName")
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<long?>("CvSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("CvUploadedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Headline")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("CandidateProfiles");
+                });
+
             modelBuilder.Entity("JobPortal.Domain.Entities.Company", b =>
                 {
                     b.Property<Guid>("Id")
@@ -59,6 +108,31 @@ namespace JobPortal.Infrastructure.Migrations
                     b.ToTable("Companies");
                 });
 
+            modelBuilder.Entity("JobPortal.Domain.Entities.FavoriteVacancy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VacancyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VacancyId");
+
+                    b.HasIndex("UserId", "VacancyId")
+                        .IsUnique();
+
+                    b.ToTable("FavoriteVacancies");
+                });
+
             modelBuilder.Entity("JobPortal.Domain.Entities.JobApplication", b =>
                 {
                     b.Property<Guid>("Id")
@@ -74,6 +148,15 @@ namespace JobPortal.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("CvSnapshotBlobPath")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CvSnapshotContentType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CvSnapshotFileName")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -223,6 +306,9 @@ namespace JobPortal.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
                     b.Property<string>("City")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -243,6 +329,9 @@ namespace JobPortal.Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("EmploymentType")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ExperienceLevel")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("PublishedAt")
@@ -278,6 +367,41 @@ namespace JobPortal.Infrastructure.Migrations
                     b.ToTable("Vacancies");
                 });
 
+            modelBuilder.Entity("JobPortal.Domain.Entities.VacancySkill", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid>("VacancyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name");
+
+                    b.HasIndex("VacancyId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("VacancySkills");
+                });
+
+            modelBuilder.Entity("JobPortal.Domain.Entities.CandidateProfile", b =>
+                {
+                    b.HasOne("JobPortal.Domain.Entities.User", "User")
+                        .WithOne("CandidateProfile")
+                        .HasForeignKey("JobPortal.Domain.Entities.CandidateProfile", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("JobPortal.Domain.Entities.Company", b =>
                 {
                     b.HasOne("JobPortal.Domain.Entities.User", "Owner")
@@ -287,6 +411,25 @@ namespace JobPortal.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("JobPortal.Domain.Entities.FavoriteVacancy", b =>
+                {
+                    b.HasOne("JobPortal.Domain.Entities.User", "User")
+                        .WithMany("Favorites")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("JobPortal.Domain.Entities.Vacancy", "Vacancy")
+                        .WithMany("Favorites")
+                        .HasForeignKey("VacancyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+
+                    b.Navigation("Vacancy");
                 });
 
             modelBuilder.Entity("JobPortal.Domain.Entities.JobApplication", b =>
@@ -341,6 +484,17 @@ namespace JobPortal.Infrastructure.Migrations
                     b.Navigation("Company");
                 });
 
+            modelBuilder.Entity("JobPortal.Domain.Entities.VacancySkill", b =>
+                {
+                    b.HasOne("JobPortal.Domain.Entities.Vacancy", "Vacancy")
+                        .WithMany("Skills")
+                        .HasForeignKey("VacancyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Vacancy");
+                });
+
             modelBuilder.Entity("JobPortal.Domain.Entities.Company", b =>
                 {
                     b.Navigation("Vacancies");
@@ -350,7 +504,11 @@ namespace JobPortal.Infrastructure.Migrations
                 {
                     b.Navigation("Applications");
 
+                    b.Navigation("CandidateProfile");
+
                     b.Navigation("Company");
+
+                    b.Navigation("Favorites");
 
                     b.Navigation("RefreshTokens");
                 });
@@ -358,6 +516,10 @@ namespace JobPortal.Infrastructure.Migrations
             modelBuilder.Entity("JobPortal.Domain.Entities.Vacancy", b =>
                 {
                     b.Navigation("Applications");
+
+                    b.Navigation("Favorites");
+
+                    b.Navigation("Skills");
                 });
 #pragma warning restore 612, 618
         }

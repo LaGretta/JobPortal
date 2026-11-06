@@ -15,4 +15,6 @@ public interface IJobApplicationService
 
     Task<ApplicationDto> UpdateStatusAsync(
         Guid employerId, Guid applicationId, UpdateApplicationStatusDto dto, CancellationToken ct);
+    
+    Task<FileDownloadDto> DownloadCvAsync(Guid employerId, Guid applicationId, CancellationToken ct);
 }

@@ -485,3 +485,5 @@ appsettings.Development.json
 
 publish/
 publish.zip
+
+profile.xml

@@ -1,5 +1,6 @@
 ﻿using JobPortal.Application.DTO;
 using JobPortal.Application.DTO.Applications;
+using JobPortal.Application.DTO.Notifications;
 using JobPortal.Application.Exceptions;
 using JobPortal.Application.Interfaces;
 using JobPortal.Application.Interfaces.Infrastructure;
@@ -16,23 +17,29 @@ public class JobApplicationService : IJobApplicationService
     private readonly IVacancyRepository _vacancies;
     private readonly ICompanyRepository _companies;
     private readonly IUnitOfWork _uow;
-    private readonly IApplicationNotifier _notifier;
+    private readonly INotificationQueue _notifications;
+    private readonly ICandidateProfileRepository _profiles;
+    private readonly IFileStorage _storage;
 
     public JobApplicationService(
         IJobApplicationRepository applications,
         IVacancyRepository vacancies,
         ICompanyRepository companies,
         IUnitOfWork uow,
-        IApplicationNotifier notifier)
+        INotificationQueue notifications,
+        ICandidateProfileRepository profiles,
+        IFileStorage storage)
     {
         _applications = applications;
         _vacancies = vacancies;
         _companies = companies;
         _uow = uow;
-        _notifier = notifier;
+        _notifications = notifications;
+        _profiles = profiles;
+        _storage = storage;
     }
 
-    public async Task<ApplicationDto> ApplyAsync(
+       public async Task<ApplicationDto> ApplyAsync(
         Guid candidateId, CreateApplicationDto dto, CancellationToken ct)
     {
         var vacancy = await _vacancies.GetByIdAsync(dto.VacancyId, ct);
@@ -46,24 +53,47 @@ public class JobApplicationService : IJobApplicationService
         if (await _applications.ExistsAsync(dto.VacancyId, candidateId, ct))
             throw new ConflictException("Ви вже відгукнулись на цю вакансію");
 
+        var profile = await _profiles.GetByUserAsync(candidateId, ct);
+
+        // Без резюме відгук не має сенсу: роботодавцю нічого буде качати.
+        if (profile is null || profile.CvBlobPath is null)
+            throw new ArgumentException("Спершу завантажте резюме у профіль");
+
+        // Копія файлу на момент відгуку. Свій Guid, а не Id відгуку — Id EF
+        // генерує сам, і покладатись на те, що він уже є до SaveChanges, не варто.
+        var snapshotPath = $"applications/{candidateId}/{Guid.NewGuid()}.pdf";
+
+        await _storage.CopyAsync(profile.CvBlobPath, snapshotPath, ct);
+
         var application = new JobApplication
         {
             VacancyId = dto.VacancyId,
             CandidateId = candidateId,
             CoverLetter = string.IsNullOrWhiteSpace(dto.CoverLetter)
                 ? null
-                : dto.CoverLetter.Trim()
+                : dto.CoverLetter.Trim(),
+
+            CvSnapshotBlobPath = snapshotPath,
+            CvSnapshotFileName = profile.CvFileName,
+            CvSnapshotContentType = profile.CvContentType
         };
 
-        await _applications.AddAsync(application, ct);
+        try
+        {
+            await _applications.AddAsync(application, ct);
 
-        await _uow.SaveChangesAsync(ct);
-
-        // Перечитуємо з Include, щоб DTO мав назву вакансії й компанії.
+            await _uow.SaveChangesAsync(ct);
+        }
+        catch
+        {
+            await _storage.DeleteAsync(snapshotPath, ct);
+            throw;
+        }
         var saved = await _applications.GetByIdAsync(application.Id, ct);
         var result = Map(saved!);
 
-        await _notifier.NotifyNewApplicationAsync(vacancy.Company.OwnerId, result, ct);
+        _notifications.Enqueue(new NotificationMessage(
+            NotificationType.NewApplication, vacancy.Company.OwnerId, result));
 
         return result;
     }
@@ -115,10 +145,36 @@ public class JobApplicationService : IJobApplicationService
 
         var result = Map(application);
 
-        // Кандидату — «вас запросили» без оновлення сторінки.
-        await _notifier.NotifyStatusChangedAsync(application.CandidateId, result, ct);
+        _notifications.Enqueue(new NotificationMessage(
+            NotificationType.ApplicationStatusChanged, application.CandidateId, result));
 
         return result;
+    }
+    public async Task<FileDownloadDto> DownloadCvAsync(
+        Guid employerId, Guid applicationId, CancellationToken ct)
+    {
+        var application = await _applications.GetByIdAsync(applicationId, ct);
+
+        if (application is null)
+            throw new NotFoundException("Відгук не знайдено");
+
+        // Та сама перевірка, що в UpdateStatusAsync: вакансія мусить бути твоя.
+        // Саме вона й робить резюме доступним тільно тому роботодавцю,
+        // якому кандидат подався.
+        await EnsureVacancyIsMineAsync(employerId, application.VacancyId, ct);
+
+        // Беремо шлях З ВІДГУКУ, а не з профілю кандидата. Тому:
+        // кандидат може перезавантажити або видалити своє резюме —
+        // роботодавець і далі отримає те, що йому надіслали.
+        if (application.CvSnapshotBlobPath is null)
+            throw new NotFoundException("До цього відгуку резюме не додано");
+
+        return new FileDownloadDto
+        {
+            Content = await _storage.DownloadAsync(application.CvSnapshotBlobPath, ct),
+            FileName = application.CvSnapshotFileName ?? "cv.pdf",
+            ContentType = application.CvSnapshotContentType ?? "application/pdf"
+        };
     }
 
     private async Task EnsureVacancyIsMineAsync(
@@ -150,6 +206,9 @@ public class JobApplicationService : IJobApplicationService
         CandidateFirstName = a.Candidate.FirstName,
         CandidateLastName = a.Candidate.LastName,
         CandidateEmail = a.Candidate.Email,
-        CandidatePhone = a.Candidate.PhoneNumber
+        CandidatePhone = a.Candidate.PhoneNumber,
+        
+        HasCv = a.CvSnapshotBlobPath is not null,
+        CvFileName = a.CvSnapshotFileName
     };
 }

@@ -41,4 +41,12 @@ public class ApplicationController : ControllerBase
     public async Task<ActionResult<ApplicationDto>> UpdateStatus(
         Guid id, UpdateApplicationStatusDto dto, CancellationToken ct)
         => Ok(await _applications.UpdateStatusAsync(User.GetUserId(), id, dto, ct));
+    
+    [Authorize(Roles = Roles.Employer)]
+    [HttpGet("{id:guid}/cv")]
+    public async Task<IActionResult> DownloadCv(Guid id, CancellationToken ct)
+    {
+        var f = await _applications.DownloadCvAsync(User.GetUserId(), id, ct);
+        return File(f.Content, f.ContentType, f.FileName);
+    }
 }

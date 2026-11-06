@@ -13,6 +13,9 @@ public class AppDbContext : DbContext
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<Vacancy> Vacancies => Set<Vacancy>();
     public DbSet<JobApplication> JobApplications => Set<JobApplication>();
+    public DbSet<CandidateProfile> CandidateProfiles => Set<CandidateProfile>();
+    public DbSet<FavoriteVacancy> FavoriteVacancies => Set<FavoriteVacancy>();
+    public DbSet<VacancySkill> VacancySkills => Set<VacancySkill>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -29,3 +29,25 @@ public enum VacancyStatus
     Published = 1,
     Closed = 2
 }
+public enum VacancyCategory
+{
+    It = 0,
+    Marketing = 1,
+    Sales = 2,
+    Finance = 3,
+    Design = 4,
+    Education = 5,
+    Medicine = 6,
+    Logistics = 7,
+    Construction = 8,
+    Service = 9,
+    Other = 10
+}
+public enum ExperienceLevel
+{
+    NoExperience = 0,
+    Junior = 1,
+    Middle = 2,
+    Senior = 3,
+    Lead = 4
+}

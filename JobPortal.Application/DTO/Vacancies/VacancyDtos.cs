@@ -23,6 +23,11 @@ public class VacancyDto
 
     public DateTime CreatedAt { get; set; }
     public DateTime? PublishedAt { get; set; }
+    
+    
+    public VacancyCategory Category { get; set; }
+    public ExperienceLevel ExperienceLevel { get; set; }
+    public List<string> Skills { get; set; } = new();
 }
 
 public class CreateVacancyDto
@@ -37,6 +42,10 @@ public class CreateVacancyDto
 
     public EmploymentType EmploymentType { get; set; }
     public WorkMode WorkMode { get; set; }
+    
+    public VacancyCategory Category { get; set; }
+    public ExperienceLevel ExperienceLevel { get; set; }
+    public List<string> Skills { get; set; } = new();
 }
 public class UpdateVacancyDto : CreateVacancyDto { }
 
@@ -51,4 +60,12 @@ public class VacancyFilter : PageRequest
     public WorkMode? WorkMode { get; set; }
     public decimal? SalaryFrom { get; set; }
     public Currency? Currency { get; set; }
+
+    public VacancyCategory? Category { get; set; }
+    public ExperienceLevel? ExperienceLevel { get; set; }
+    // У query string передається повторенням: ?skills=C%23&skills=SQL
+    public List<string> Skills { get; set; } = new();
+    public VacancySortBy SortBy { get; set; } = VacancySortBy.Date;
+    // true = спадання. За замовчуванням свіжі вакансії першими.
+    public bool Desc { get; set; } = true;
 }

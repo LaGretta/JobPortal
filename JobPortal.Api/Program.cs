@@ -28,7 +28,11 @@ builder.Services.AddProblemDetails();
 
 
 builder.Services.AddSignalR();
-builder.Services.AddScoped<IApplicationNotifier, SignalRApplicationNotifier>();
+
+builder.Services.AddSingleton<NotificationQueue>();
+builder.Services.AddSingleton<INotificationQueue>(sp => sp.GetRequiredService<NotificationQueue>());
+builder.Services.AddSingleton<IApplicationNotifier, SignalRApplicationNotifier>();
+builder.Services.AddHostedService<NotificationDispatcher>();
 
 
 var jwt = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
@@ -88,10 +92,13 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>()
+                  ?? new[] { "http://localhost:5173", "http://localhost:3000" };
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy => policy
-        .WithOrigins("http://localhost:5173", "http://localhost:3000")
+        .WithOrigins(corsOrigins)
         .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials());
