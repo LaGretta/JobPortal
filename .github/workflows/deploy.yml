@@ -38,6 +38,13 @@ jobs:
       # Міграції ДО деплою: інакше новий код прийде на базу,
       # якої він ще не знає, і впаде на першому ж запиті.
       - name: Apply migrations
+        env:
+          # dotnet ef запускає Program.cs цілком, щоб дістати DbContext,
+          # тому спрацьовує і наш запобіжник на BlobStorage. Міграції файлів
+          # не торкаються, тому значення фіктивне - важлива лише форма.
+          # Справжній ключ сховища пайплайну не потрібен.
+          BlobStorage__ConnectionString: "DefaultEndpointsProtocol=https;AccountName=migrations;AccountKey=dGVzdA==;EndpointSuffix=core.windows.net"
+          BlobStorage__ContainerName: "migrations"
         run: |
           export PATH="$PATH:$HOME/.dotnet/tools"
           dotnet tool install --global dotnet-ef
