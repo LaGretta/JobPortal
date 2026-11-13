@@ -58,13 +58,9 @@ public class CandidateProfileService : ICandidateProfileService
         Validate(file);
 
         var profile = await GetOrCreateAsync(userId, ct);
-
         // Запамʼятовуємо старий шлях ДО перезапису полів.
         var oldPath = profile.CvBlobPath;
 
-        // Новий Guid у назві, а не ім'я файлу користувача: інакше
-        // "резюме.pdf" від двох людей могли б зіткнутись, а ще й
-        // ім'я файлу з кирилицею й пробілами в шляху — зайвий клопіт.
         var newPath = $"{userId}/{Guid.NewGuid()}.pdf";
 
         await _storage.UploadAsync(file.Content, newPath, PdfContentType, ct);
@@ -76,14 +72,19 @@ public class CandidateProfileService : ICandidateProfileService
         profile.CvUploadedAt = DateTime.UtcNow;
         profile.UpdatedAt = DateTime.UtcNow;
 
-        await _uow.SaveChangesAsync(ct);
-
-        // Старий файл видаляємо ПІСЛЯ збереження бази. Якщо видалення впаде —
-        // у сховищі лишиться сирота, але профіль буде правильний. Якби видаляли
-        // спочатку, а база впала — профіль вказував би на файл, якого вже нема.
-        // Знімки резюме в відгуках це не зачепить: вони лежать окремими копіями.
+        try
+        {
+            await _uow.SaveChangesAsync(ct);
+        }
+        catch
+        {
+            // База не прийняла — новий файл уже у сховищі й більше нікому
+            // не потрібен. Прибираємо й віддаємо початкову помилку далі.
+            await _storage.TryDeleteAsync(newPath);
+            throw;
+        }
         if (!string.IsNullOrEmpty(oldPath))
-            await _storage.DeleteAsync(oldPath, ct);
+            await _storage.TryDeleteAsync(oldPath);
 
         return Map(profile);
     }
@@ -106,7 +107,7 @@ public class CandidateProfileService : ICandidateProfileService
 
         await _uow.SaveChangesAsync(ct);
 
-        await _storage.DeleteAsync(path, ct);
+        await _storage.TryDeleteAsync(path);
     }
 
     public async Task<FileDownloadDto> DownloadMyCvAsync(Guid userId, CancellationToken ct)
@@ -116,9 +117,14 @@ public class CandidateProfileService : ICandidateProfileService
         if (profile is null || profile.CvBlobPath is null)
             throw new NotFoundException("Резюме не завантажено");
 
+        var content = await _storage.DownloadAsync(profile.CvBlobPath, ct);
+        
+        if (content is null)
+            throw new NotFoundException("Файл резюме не знайдено у сховищі");
+
         return new FileDownloadDto
         {
-            Content = await _storage.DownloadAsync(profile.CvBlobPath, ct),
+            Content = content,
             FileName = profile.CvFileName ?? "cv.pdf",
             ContentType = profile.CvContentType ?? PdfContentType
         };

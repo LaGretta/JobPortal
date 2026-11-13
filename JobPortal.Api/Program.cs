@@ -122,3 +122,6 @@ app.MapHub<ApplicationsHub>("/hubs/applications");
 app.MapControllers();
 
 app.Run();
+
+
+public partial class Program { }

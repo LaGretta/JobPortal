@@ -86,7 +86,8 @@ public class JobApplicationService : IJobApplicationService
         }
         catch
         {
-            await _storage.DeleteAsync(snapshotPath, ct);
+            await _storage.TryDeleteAsync(snapshotPath);
+
             throw;
         }
         var saved = await _applications.GetByIdAsync(application.Id, ct);
@@ -158,20 +159,21 @@ public class JobApplicationService : IJobApplicationService
         if (application is null)
             throw new NotFoundException("Відгук не знайдено");
 
-        // Та сама перевірка, що в UpdateStatusAsync: вакансія мусить бути твоя.
-        // Саме вона й робить резюме доступним тільно тому роботодавцю,
-        // якому кандидат подався.
         await EnsureVacancyIsMineAsync(employerId, application.VacancyId, ct);
 
-        // Беремо шлях З ВІДГУКУ, а не з профілю кандидата. Тому:
-        // кандидат може перезавантажити або видалити своє резюме —
-        // роботодавець і далі отримає те, що йому надіслали.
         if (application.CvSnapshotBlobPath is null)
             throw new NotFoundException("До цього відгуку резюме не додано");
 
+        var content = await _storage.DownloadAsync(application.CvSnapshotBlobPath, ct);
+
+        // Шлях у базі є, а файлу у сховищі нема — розсинхрон.
+        // Для клієнта це 404, а не 500.
+        if (content is null)
+            throw new NotFoundException("Файл резюме не знайдено у сховищі");
+
         return new FileDownloadDto
         {
-            Content = await _storage.DownloadAsync(application.CvSnapshotBlobPath, ct),
+            Content = content,
             FileName = application.CvSnapshotFileName ?? "cv.pdf",
             ContentType = application.CvSnapshotContentType ?? "application/pdf"
         };

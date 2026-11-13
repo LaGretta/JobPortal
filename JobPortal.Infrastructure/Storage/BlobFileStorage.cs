@@ -1,21 +1,24 @@
+using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
 using JobPortal.Application.Interfaces.Infrastructure;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace JobPortal.Infrastructure.Storage;
 
 public class BlobFileStorage : IFileStorage
 {
-    // Клієнт одного контейнера. Створюється раз — він потокобезпечний.
     private readonly BlobContainerClient _container;
+    private readonly ILogger<BlobFileStorage> _logger;
 
-    public BlobFileStorage(IOptions<BlobStorageSettings> options)
+    public BlobFileStorage(IOptions<BlobStorageSettings> options, ILogger<BlobFileStorage> logger)
     {
-        var settings = options.Value;                                         // розгортаємо IOptions в сам обʼєкт
-        var service = new BlobServiceClient(settings.ConnectionString);        // підключення до акаунта сховища
-        _container = service.GetBlobContainerClient(settings.ContainerName);   // звужуємось до "resumes"
+        var settings = options.Value;
+        var service = new BlobServiceClient(settings.ConnectionString);
+        _container = service.GetBlobContainerClient(settings.ContainerName);
+        _logger = logger;
     }
 
     public async Task UploadAsync(Stream content, string blobPath, string contentType, CancellationToken ct)
@@ -31,18 +34,31 @@ public class BlobFileStorage : IFileStorage
             ct);
     }
 
-    public async Task<Stream> DownloadAsync(string blobPath, CancellationToken ct)
+    public async Task<Stream?> DownloadAsync(string blobPath, CancellationToken ct)
     {
         var blob = _container.GetBlobClient(blobPath);
-        
-        return await blob.OpenReadAsync(cancellationToken: ct);
+
+        try
+        {
+            return await blob.OpenReadAsync(cancellationToken: ct);
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            return null;
+        }
     }
 
-    public async Task DeleteAsync(string blobPath, CancellationToken ct)
+    public async Task TryDeleteAsync(string blobPath)
     {
-        var blob = _container.GetBlobClient(blobPath);
-        
-        await blob.DeleteIfExistsAsync(cancellationToken: ct);
+        try
+        {
+            await _container.GetBlobClient(blobPath).DeleteIfExistsAsync();
+        }
+        catch (Exception ex)
+        {
+            //по логах потім видно які файли осиротіли у сховищі
+            _logger.LogWarning(ex, "Не вдалось видалити файл {BlobPath}", blobPath);
+        }
     }
 
     public async Task CopyAsync(string sourceBlobPath, string targetBlobPath, CancellationToken ct)
