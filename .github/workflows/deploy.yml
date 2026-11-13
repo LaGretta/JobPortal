@@ -1,12 +1,11 @@
-name: Deploy to Azure
+name: Deploy
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -24,7 +23,47 @@ jobs:
 
       - uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: '${{ secrets.AZURE_CREDENTIALS }}'
+
+      # Azure SQL пускає тільки відомі адреси. Раннер GitHub кожного разу
+      # з новою, тому відкриваємо її на час прогону і закриваємо в кінці.
+      - name: Open SQL firewall for this runner
+        run: |
+          IP=$(curl -s https://ipv4.icanhazip.com)
+          az sql server firewall-rule create \
+            -g jobportal-rg -s jobportal-sql-sasha2626 \
+            -n gh-${{ github.run_id }} \
+            --start-ip-address $IP --end-ip-address $IP
+
+      # Міграції ДО деплою: інакше новий код прийде на базу,
+      # якої він ще не знає, і впаде на першому ж запиті.
+      - name: Apply migrations
+        run: |
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet tool install --global dotnet-ef
+
+          # Рядок підключення беремо з налаштувань App Service - там він
+          # уже є. Так пароль бази не стає ще одним секретом у GitHub.
+          CONN=$(az webapp config appsettings list \
+            -g jobportal-rg -n jobportal-pl-api \
+            --query "[?name=='ConnectionStrings__Default'].value" -o tsv)
+
+          # add-mask: Actions замінить це значення на зірочки, якщо воно
+          # десь вилізе в лог. Без цього пароль бази опинився б у логах.
+          echo "::add-mask::$CONN"
+
+          dotnet ef database update \
+            -p JobPortal.Infrastructure -s JobPortal.Api \
+            --connection "$CONN"
 
       - name: Deploy
         run: az webapp deploy -g jobportal-rg -n jobportal-pl-api --src-path publish.zip --type zip
+
+      # if: always() - правило закривається навіть якщо міграції впали.
+      # Інакше кожен невдалий прогон лишав би відкриту дірку у фаєрволі.
+      - name: Close SQL firewall
+        if: always()
+        run: |
+          az sql server firewall-rule delete \
+            -g jobportal-rg -s jobportal-sql-sasha2626 \
+            -n gh-${{ github.run_id }} || true
