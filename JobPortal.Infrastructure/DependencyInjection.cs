@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.Configure<BlobStorageSettings>(configuration.GetSection("BlobStorage"));
         services.AddSingleton<IFileStorage, BlobFileStorage>();
+        services.Configure<AdminSettings>(configuration.GetSection("Admin"));
 
 
         services.AddScoped<IUserRepository, UserRepository>();
@@ -40,6 +41,7 @@ public static class DependencyInjection
         services.AddScoped<IJobApplicationRepository, JobApplicationRepository>();
         services.AddScoped<IFavoriteVacancyRepository, FavoriteVacancyRepository>();
         services.AddScoped<ICandidateProfileRepository, CandidateProfileRepository>();
+        services.AddScoped<IAdminRepository, AdminRepository>();
         
         
         services.Configure<EmailSettings>(configuration.GetSection("Email"));

@@ -5,9 +5,11 @@ using JobPortal.Api.Hubs;
 using JobPortal.Api.Middleware;
 using JobPortal.Api.Services;
 using JobPortal.Application;
+using JobPortal.Application.Common;
 using JobPortal.Application.Interfaces.Infrastructure;
 using JobPortal.Application.Validator;
 using JobPortal.Infrastructure;
+using JobPortal.Infrastructure.Data;
 using JobPortal.Infrastructure.Secutiry;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -69,7 +71,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(Policies.Admin, policy => policy
+        .RequireAuthenticatedUser()
+        .RequireRole(Roles.Admin));
+});
+
+
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -105,6 +115,13 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Адмін створюється при старті, якщо його ще нема. Ідемпотентно:
+// другий запуск нічого не міняє.
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    await AdminSeeder.SeedAsync(scope.ServiceProvider, CancellationToken.None);
+}
 
 app.UseExceptionHandler();
 

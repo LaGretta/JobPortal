@@ -1,8 +1,11 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using JobPortal.Tests.Fakes;
+using Microsoft.IdentityModel.Tokens;
 
 namespace JobPortal.Tests.Setup;
 
@@ -145,5 +148,34 @@ public abstract class ApiTestBase
         var body = await response.Content.ReadFromJsonAsync<Dictionary<string, JsonElement>>();
 
         return body![property].ToString();
+    }
+    
+    
+    protected async Task<string> LoginAsync(string email, string password)
+    {
+        var response = await Anonymous().PostAsJsonAsync("/api/Auth/login", new { email, password });
+
+        response.EnsureSuccessStatusCode();
+
+        return await ReadAsync(response, "accessToken");
+    }
+
+    protected Task<string> LoginAdminAsync()
+        => LoginAsync(ApiFactory.AdminEmail, ApiFactory.AdminPassword);
+
+
+    protected static string ExpiredToken()
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(ApiFactory.JwtKey));
+
+        var token = new JwtSecurityToken(
+            issuer: ApiFactory.JwtIssuer,
+            audience: ApiFactory.JwtAudience,
+            claims: [new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString())],
+            notBefore: DateTime.UtcNow.AddMinutes(-30),
+            expires: DateTime.UtcNow.AddMinutes(-15),
+            signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256));
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }

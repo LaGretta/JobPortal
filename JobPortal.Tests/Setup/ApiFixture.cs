@@ -4,7 +4,12 @@ public class ApiFixture : IAsyncLifetime
 {
     public ApiFactory Factory { get; } = new();
 
-    public Task InitializeAsync() => Factory.CreateDatabaseAsync();
+    public async Task InitializeAsync()
+    {
+        await Factory.CreateDatabaseAsync();
+
+        await Factory.SeedAdminAsync();
+    }
 
     public async Task DisposeAsync()
     {

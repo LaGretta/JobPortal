@@ -14,6 +14,15 @@ public class ApiFactory : WebApplicationFactory<Program>
 {
     private const string LocalDbServer =
         @"Server=(localdb)\MSSQLLocalDB;Trusted_Connection=True;TrustServerCertificate=True";
+    
+    // Публічні константи, бо тести ними користуються: логін адміном
+    // і складання протермінованого токена тим самим ключем.
+    public const string JwtKey = "jobportal-tests-key-at-least-32-bytes-long";
+    public const string JwtIssuer = "JobPortal.Tests";
+    public const string JwtAudience = "JobPortal.Tests";
+
+    public const string AdminEmail = "admin@tests.local";
+    public const string AdminPassword = "AdminPass123!";
 
     private readonly string _dbName = "JobPortalTests_" + Guid.NewGuid().ToString("N");
 
@@ -44,6 +53,24 @@ public class ApiFactory : WebApplicationFactory<Program>
         Set("Email__FromName", "JobPortal Tests");
         Set("Email__FromAddress", "tests@example.com");
         Set("Email__ResetUrlBase", "http://localhost/reset");
+        
+        
+        Set("Admin__Email", "admin@tests.local");
+        Set("Admin__Password", "AdminPass123!");
+        Set("Admin__FirstName", "Admin");
+        Set("Admin__LastName", "Tests");
+        
+        
+        Set("Jwt__Key", JwtKey);
+        Set("Jwt__Issuer", JwtIssuer);
+        Set("Jwt__Audience", JwtAudience);
+        Set("Jwt__AccessTokenMinutes", "15");
+        Set("Jwt__RefreshTokenDays", "7");
+
+        Set("Admin__Email", AdminEmail);
+        Set("Admin__Password", AdminPassword);
+        Set("Admin__FirstName", "Admin");
+        Set("Admin__LastName", "Tests");
     }
 
     private static void Set(string key, string value)
@@ -68,7 +95,16 @@ public class ApiFactory : WebApplicationFactory<Program>
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await db.Database.MigrateAsync();
     }
-
+    
+    // Сіємо після міграцій. При старті хоста бази ще не існує, тому
+    // AdminSeeder там виходить ні з чим — досіваємо вручну.
+    public async Task SeedAdminAsync()
+    {
+        using var scope = Services.CreateScope();
+        await AdminSeeder.SeedAsync(scope.ServiceProvider, CancellationToken.None);
+    }
+    
+    
     public async Task DropDatabaseAsync()
     {
         using var scope = Services.CreateScope();
