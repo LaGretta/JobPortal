@@ -20,6 +20,7 @@ public class GlobalExceptionHandler : IExceptionHandler
             UnauthorizedException => StatusCodes.Status401Unauthorized,
             ForbiddenException => StatusCodes.Status403Forbidden,
             ArgumentException => StatusCodes.Status400BadRequest,
+            BadRequestException => StatusCodes.Status400BadRequest,
             _ => StatusCodes.Status500InternalServerError
         };
 
@@ -41,6 +42,12 @@ public class GlobalExceptionHandler : IExceptionHandler
                 : exception.Message
         };
 
+        // Машинний код у відповідь. Для 500 — загальний: усе, що
+        // всередині, лишається в логах.
+        problem.Extensions["code"] = statusCode == StatusCodes.Status500InternalServerError
+            ? "server_error"
+            : exception is AppException app ? app.Code : "bad_request";
+        
         httpContext.Response.StatusCode = statusCode;
         await httpContext.Response.WriteAsJsonAsync(problem, ct);
 

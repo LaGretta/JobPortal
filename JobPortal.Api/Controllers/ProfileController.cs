@@ -2,6 +2,7 @@
 using JobPortal.Application.Common;
 using JobPortal.Application.DTO;
 using JobPortal.Application.DTO.Profiles;
+using JobPortal.Application.Exceptions;
 using JobPortal.Application.Interfaces.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -36,7 +37,7 @@ public class ProfileController : ControllerBase
         IFormFile file, CancellationToken ct)
     {
         if (file is null || file.Length == 0)
-            return BadRequest("Файл не надіслано");
+            throw new BadRequestException("Файл не надіслано", "cv_empty");
 
         // await using — потік закриється, навіть якщо сервіс кине виняток.
         await using var stream = file.OpenReadStream();

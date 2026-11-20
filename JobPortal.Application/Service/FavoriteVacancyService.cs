@@ -36,7 +36,7 @@ public class FavoriteVacancyService : IFavoriteVacancyService
 
         // Дружня 409 замість помилки унікального індексу.
         if (await _favorites.ExistsAsync(userId, vacancyId, ct))
-            throw new ConflictException("Вакансія вже в обраному");
+            throw new ConflictException("Вакансія вже в обраному", "duplicate_favorite");
 
         await _favorites.AddAsync(new FavoriteVacancy
         {

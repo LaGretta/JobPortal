@@ -51,13 +51,13 @@ public class JobApplicationService : IJobApplicationService
 
         // Зручна перевірка: у нормальному випадку одразу 409 замість помилки бази.
         if (await _applications.ExistsAsync(dto.VacancyId, candidateId, ct))
-            throw new ConflictException("Ви вже відгукнулись на цю вакансію");
+            throw new ConflictException("Ви вже відгукнулись на цю вакансію", "duplicate_application");
 
         var profile = await _profiles.GetByUserAsync(candidateId, ct);
 
         // Без резюме відгук не має сенсу: роботодавцю нічого буде качати.
         if (profile is null || profile.CvBlobPath is null)
-            throw new ArgumentException("Спершу завантажте резюме у профіль");
+            throw new BadRequestException("Спершу завантажте резюме у профіль", "cv_required");
 
         // Копія файлу на момент відгуку. Свій Guid, а не Id відгуку — Id EF
         // генерує сам, і покладатись на те, що він уже є до SaveChanges, не варто.

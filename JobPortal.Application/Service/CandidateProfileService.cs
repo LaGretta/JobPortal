@@ -148,20 +148,18 @@ public class CandidateProfileService : ICandidateProfileService
     private static void Validate(FileUploadDto file)
     {
         if (file.SizeBytes == 0)
-            throw new ArgumentException("Файл порожній");
+            throw new BadRequestException("Файл порожній", "cv_empty");
 
         if (file.SizeBytes > MaxCvBytes)
-            throw new ArgumentException($"Файл більший за {MaxCvBytes / 1024 / 1024} МБ");
+            throw new BadRequestException($"Файл більший за {MaxCvBytes / 1024 / 1024} МБ", "cv_too_large");
 
-        // Розширення й Content-Type прислав клієнт. Перевіряємо їх, щоб дати
-        // зрозумілу помилку на звичайну помилку користувача (кинув .docx).
         if (!string.Equals(Path.GetExtension(file.FileName), ".pdf",
                 StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("Дозволено тільки PDF");
+            throw new BadRequestException("Дозволено тільки PDF", "cv_not_pdf");
 
         if (!string.Equals(file.ContentType, PdfContentType,
                 StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("Дозволено тільки PDF");
+            throw new BadRequestException("Дозволено тільки PDF", "cv_not_pdf");
         
         Span<byte> header = stackalloc byte[5];
         int read = file.Content.ReadAtLeast(header, 5, throwOnEndOfStream: false);
@@ -170,7 +168,7 @@ public class CandidateProfileService : ICandidateProfileService
         file.Content.Seek(0, SeekOrigin.Begin);
 
         if (read < 5 || !header.SequenceEqual("%PDF-"u8))
-            throw new ArgumentException("Файл не схожий на PDF");
+            throw new BadRequestException("Файл не схожий на PDF", "cv_not_pdf");
     }
 
     private static string SafeFileName(string name)

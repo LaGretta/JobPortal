@@ -100,7 +100,7 @@ public class AuthService : IAuthService
         string normalized = Normalize(email);
 
         if (await _users.ExistsByEmailAsync(normalized, ct))
-            throw new ConflictException("Користувач з таким email уже існує");
+            throw new ConflictException("Користувач з таким email уже існує", "email_taken");
 
         var user = new User
         {
